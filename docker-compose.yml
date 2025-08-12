@@ -1,73 +1,101 @@
-version: '3.8'
+---
+version: "3.8"
 
-x-airflow-common:
-  &airflow-common
-  image: ${AIRFLOW_IMAGE}
-  env_file: .env
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.3
+  env_file:
+    - .env
   environment:
-    &airflow-env
-    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-    AIRFLOW__CORE__FERNET_KEY: ''
+    # --- Core ---
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW__CORE__FERNET_KEY:-}"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__DAG_CONCURRENCY: "16"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+    # --- DB & Broker (Celery) ---
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW_UID: ${AIRFLOW_UID}
+    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql+psycopg2://airflow:airflow@postgres/airflow
+  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
   volumes:
-    - ./dags:/opt/airflow/dags:Z
-    - ./logs:/opt/airflow/logs:Z
-    - ./plugins:/opt/airflow/plugins:Z
-    - ./.env.runtime:/opt/airflow/.env.runtime:Z
-  user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
-  depends_on:
-    - postgres
-    - redis
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+  restart: unless-stopped
 
 services:
   postgres:
-    image: docker.io/library/postgres:15
+    image: postgres:15
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      - postgres-db-volume:/var/lib/postgresql/data:Z
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   redis:
-    image: docker.io/library/redis:7
+    image: redis:7
+    restart: unless-stopped
 
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
-    command:
-      - -c
-      - |
-        if [ -z "$AIRFLOW__CORE__FERNET_KEY" ] || [ "$AIRFLOW__CORE__FERNET_KEY" = "''" ]; then
-          echo "Generating Fernet key..."
-          FKEY=$(python - <<PY
-from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
-PY
-          )
-          echo "AIRFLOW__CORE__FERNET_KEY=${FKEY}" >> /opt/airflow/.env.runtime
-        fi
-        airflow db migrate
-        airflow users create --role Admin \
-          --username admin --password admin \
-          --firstname Air --lastname Flow \
-          --email admin@example.com || true
+    command: >
+      -c "
+      set -e;
+      airflow db upgrade &&
+      airflow users create
+        --username ${AIRFLOW_ADMIN_USER:-admin}
+        --password ${AIRFLOW_ADMIN_PASSWORD:-admin}
+        --firstname ${AIRFLOW_ADMIN_FIRSTNAME:-Admin}
+        --lastname ${AIRFLOW_ADMIN_LASTNAME:-User}
+        --role Admin
+        --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com}
+      "
+    depends_on:
+      - postgres
+      - redis
 
-  airflow-webserver:
+  webserver:
     <<: *airflow-common
     command: webserver
     ports:
       - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
 
-  airflow-scheduler:
+  scheduler:
     <<: *airflow-common
     command: scheduler
+    depends_on:
+      - webserver
 
-  airflow-triggerer:
+  worker:
+    <<: *airflow-common
+    command: celery worker
+    depends_on:
+      - scheduler
+      - redis
+      - postgres
+
+  triggerer:
     <<: *airflow-common
     command: triggerer
+    depends_on:
+      - scheduler
+
+  flower:
+    <<: *airflow-common
+    command: celery flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - scheduler
+      - redis
+      - postgres
 
 volumes:
-  postgres-db-volume:
+  postgres-data:
