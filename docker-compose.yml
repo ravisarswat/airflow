@@ -1,0 +1,73 @@
+version: '3.8'
+
+x-airflow-common:
+  &airflow-common
+  image: ${AIRFLOW_IMAGE}
+  env_file: .env
+  environment:
+    &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+    AIRFLOW_UID: ${AIRFLOW_UID}
+  volumes:
+    - ./dags:/opt/airflow/dags:Z
+    - ./logs:/opt/airflow/logs:Z
+    - ./plugins:/opt/airflow/plugins:Z
+    - ./.env.runtime:/opt/airflow/.env.runtime:Z
+  user: "${AIRFLOW_UID}:${AIRFLOW_GID}"
+  depends_on:
+    - postgres
+    - redis
+
+services:
+  postgres:
+    image: docker.io/library/postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data:Z
+
+  redis:
+    image: docker.io/library/redis:7
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        if [ -z "$AIRFLOW__CORE__FERNET_KEY" ] || [ "$AIRFLOW__CORE__FERNET_KEY" = "''" ]; then
+          echo "Generating Fernet key..."
+          FKEY=$(python - <<PY
+from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())
+PY
+          )
+          echo "AIRFLOW__CORE__FERNET_KEY=${FKEY}" >> /opt/airflow/.env.runtime
+        fi
+        airflow db migrate
+        airflow users create --role Admin \
+          --username admin --password admin \
+          --firstname Air --lastname Flow \
+          --email admin@example.com || true
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+
+volumes:
+  postgres-db-volume:
