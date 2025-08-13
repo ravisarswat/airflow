@@ -31,3 +31,7 @@ podman-compose restart scheduler webserver
 
 grep -RIn "conn_id" /opt/airflow2/dags | sed -E 's/.*conn_id[=: ]+["'\'']([^"'\'' ]+)["'\''].*/\1/' | sort -u
 
+mysql -h trmq01.ny2 -u airflow_ufact -p -D ufactairflow \
+  -e "SELECT conn_id, conn_type, host, schema, login, password, port, extra
+      FROM connection WHERE conn_id='ssh_factapps_app01'\G"
+
