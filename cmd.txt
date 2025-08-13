@@ -35,3 +35,27 @@ mysql -h trmq01.ny2 -u airflow_ufact -p -D ufactairflow \
   -e "SELECT conn_id, conn_type, host, schema, login, password, port, extra
       FROM connection WHERE conn_id='ssh_factapps_app01'\G"
 
+
+
+sudo dnf install -y mariadb-server
+sudo systemctl enable --now mariadb
+sudo mysql_secure_installation
+
+
+sudo sed -i 's/^\(\s*bind-address\s*=\s*\).*/\10.0.0.0/' /etc/my.cnf.d/mariadb-server.cnf || true
+# Agar line na mile to is section me add kar do:
+# [mysqld]
+# bind-address=0.0.0.0
+sudo systemctl restart mariadb
+
+
+
+mysql -u root -p
+
+
+
+
+
+
+
+
