@@ -53,6 +53,13 @@ sudo systemctl restart mariadb
 mysql -u root -p
 
 
+CREATE DATABASE ufactairflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE USER 'airflow_ufact'@'%' IDENTIFIED BY 'Admin@123';
+GRANT ALL PRIVILEGES ON ufactairflow.* TO 'airflow_ufact'@'%';
+
+FLUSH PRIVILEGES;
+EXIT;
 
 
 
