@@ -1,0 +1,71 @@
+version: "3.8"
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.3
+  restart: unless-stopped
+  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
+  environment:
+    PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-mysql apache-airflow-providers-ssh"
+
+    # ---- Core ----
+    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+    # (Optionally set FERNET key in a .env file)
+    AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW__CORE__FERNET_KEY:-}"
+
+    # ---- Metadata DB: EXTERNAL MySQL ----
+    # password Admin@123 is URL-encoded as Admin%40123
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >
+      mysql+mysqldb://airflow:Admin%40123@10.129.140.161:3306/airflow
+
+    # ---- Celery: EXTERNAL RabbitMQ ----
+    AIRFLOW__CELERY__BROKER_URL: >
+      amqp://airflow:Admin%40123@10.129.140.161:5672/
+    AIRFLOW__CELERY__RESULT_BACKEND: >
+      db+mysql://airflow:Admin%40123@10.129.140.161:3306/airflow
+
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+
+services:
+  airflow-init:
+    <<: *airflow-common
+    command: bash -lc "airflow db check || true; airflow db init; airflow users create --role Admin --username admin --password admin --firstname Admin --lastname User --email admin@example.com || true"
+
+  webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    depends_on:
+      - airflow-init
+
+  scheduler:
+    <<: *airflow-common
+    command: scheduler
+    depends_on:
+      - airflow-init
+
+  worker:
+    <<: *airflow-common
+    command: celery worker
+    depends_on:
+      - airflow-init
+
+  triggerer:
+    <<: *airflow-common
+    command: triggerer
+    depends_on:
+      - airflow-init
+
+  flower:
+    <<: *airflow-common
+    command: celery flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - airflow-init
