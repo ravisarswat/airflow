@@ -65,6 +65,8 @@ EXIT;
 mysql -h <DB_SERVER_IP> -u airflow_ufact -p -e "SELECT 1;" ufactairflow
 # password: Admin@123
 
+msg_rmq: amqp://airflow:Admin@123@<RABBITMQ_IP>:5672/
+sql_alchemy_conn: mysql+mysqldb://airflow:<MYSQL_PASSWORD>@<MYSQL_IP>:3306/airflow
 
 
 
