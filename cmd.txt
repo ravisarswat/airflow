@@ -1,3 +1,10 @@
 cd /opt/airflow2/dags
 grep -RIl "airflow\.operators\.sensors" . | xargs -r sed -i \
 's/from\s\+airflow\.operators\.sensors\s\+import\s\+ExternalTaskSensor/from airflow.sensors.external_task import ExternalTaskSensor/g'
+
+for s in webserver scheduler worker triggerer; do
+  podman exec -it airflow2_${s}_1 pip install \
+    "apache-airflow-providers-ssh" \
+    "apache-airflow-providers-mysql" \
+    "apache-airflow-providers-http"
+done
