@@ -62,6 +62,8 @@ FLUSH PRIVILEGES;
 EXIT;
 
 
+mysql -h <DB_SERVER_IP> -u airflow_ufact -p -e "SELECT 1;" ufactairflow
+# password: Admin@123
 
 
 
