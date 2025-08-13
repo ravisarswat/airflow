@@ -18,3 +18,12 @@ for s in webserver scheduler worker triggerer; do
   podman exec -it airflow2_${s}_1 bash -lc \
   'python -m pip install --user apache-airflow-providers-ssh apache-airflow-providers-mysql apache-airflow-providers-http'
 done
+
+
+grep -Rn "from[[:space:]]\+airflow\.operators\.sensors[[:space:]]\+import[[:space:]]\+ExternalTaskSensor" /opt/airflow2/dags
+
+sed -i.bak \
+'s/from[[:space:]]\+airflow\.operators\.sensors[[:space:]]\+import[[:space:]]\+ExternalTaskSensor/from airflow.sensors.external_task import ExternalTaskSensor/g' \
+/opt/airflow2/dags/*.py
+
+podman-compose restart scheduler webserver
