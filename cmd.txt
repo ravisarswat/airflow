@@ -27,3 +27,7 @@ sed -i.bak \
 /opt/airflow2/dags/*.py
 
 podman-compose restart scheduler webserver
+
+
+grep -RIn "conn_id" /opt/airflow2/dags | sed -E 's/.*conn_id[=: ]+["'\'']([^"'\'' ]+)["'\''].*/\1/' | sort -u
+
