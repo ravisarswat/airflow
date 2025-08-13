@@ -8,3 +8,13 @@ for s in webserver scheduler worker triggerer; do
     "apache-airflow-providers-mysql" \
     "apache-airflow-providers-http"
 done
+
+
+podman exec -it airflow2_webserver_1 bash -lc \
+'python -m pip install --user apache-airflow-providers-ssh apache-airflow-providers-mysql apache-airflow-providers-http'
+
+
+for s in webserver scheduler worker triggerer; do
+  podman exec -it airflow2_${s}_1 bash -lc \
+  'python -m pip install --user apache-airflow-providers-ssh apache-airflow-providers-mysql apache-airflow-providers-http'
+done
