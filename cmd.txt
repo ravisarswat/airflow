@@ -1,0 +1,3 @@
+cd /opt/airflow2/dags
+grep -RIl "airflow\.operators\.sensors" . | xargs -r sed -i \
+'s/from\s\+airflow\.operators\.sensors\s\+import\s\+ExternalTaskSensor/from airflow.sensors.external_task import ExternalTaskSensor/g'
