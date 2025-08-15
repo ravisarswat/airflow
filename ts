@@ -17,3 +17,8 @@ podman info --format '{{.Host.Os}} {{.Host.Kernel}} | netBackend={{.NetworkBacke
 podman network ls
 
 
+podman run --rm --network airflow2_default alpine:3.19 sh -c '
+apk add --no-cache bind-tools >/dev/null 2>&1
+nslookup rmq01.ufact.ny2 || true
+ping -c1 rmq01.ufact.ny2 || true
+'
