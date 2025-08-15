@@ -22,3 +22,7 @@ apk add --no-cache bind-tools >/dev/null 2>&1
 nslookup rmq01.ufact.ny2 || true
 ping -c1 rmq01.ufact.ny2 || true
 '
+
+NO_PROXY=localhost,127.0.0.1,10.129.140.161,rmq01.ufact.ny2,rmq01.ufact.ny2.eexchange.com
+no_proxy=localhost,127.0.0.1,10.129.140.161,rmq01.ufact.ny2,rmq01.ufact.ny2.eexchange.com
+
