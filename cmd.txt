@@ -76,4 +76,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 
+CREATE USER IF NOT EXISTS 'airflow'@'airflow01.ufact.ny2.eexchange.com' IDENTIFIED BY 'airflow';
+GRANT ALL PRIVILEGES ON airflow.* TO 'airflow'@'airflow01.ufact.ny2.eexchange.com';
+FLUSH PRIVILEGES;
 
