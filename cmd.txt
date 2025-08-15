@@ -84,3 +84,5 @@ CREATE DATABASE airflow;
 GRANT ALL PRIVILEGES ON airflow.* TO 'airflow'@'airflow01.ufact.ny2.eexchange.com';
 FLUSH PRIVILEGES;
 
+podman-compose up -d airflow-scheduler airflow-triggerer airflow-worker airflow-webserver flower
+
