@@ -12,3 +12,8 @@ cd /opt/airflow2
 podman-compose run --rm airflow-scheduler bash -lc \
 "set -x; getent hosts rmq01.ufact.ny2; getent hosts rmq01.ufact.ny2.eexchange.com"
 
+podman --version
+podman info --format '{{.Host.Os}} {{.Host.Kernel}} | netBackend={{.NetworkBackend}} | cgroups={{.Host.CgroupVersion}}'
+podman network ls
+
+
