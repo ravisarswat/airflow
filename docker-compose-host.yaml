@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  airflow-init:
+    image: apache/airflow:2.9.0
+    env_file: .env
+    entrypoint: ""
+    command: >
+      bash -lc "
+      airflow db init &&
+      airflow users create
+        --role Admin
+        --username ${_AIRFLOW_WWW_USER_USERNAME}
+        --password ${_AIRFLOW_WWW_USER_PASSWORD}
+        --firstname ${_AIRFLOW_WWW_USER_FIRSTNAME}
+        --lastname ${_AIRFLOW_WWW_USER_LASTNAME}
+        --email ${_AIRFLOW_WWW_USER_EMAIL}
+      "
+    volumes:
+      - ./dags:/opt/airflow/dags:Z
+      - ./logs:/opt/airflow/logs:Z
+      - ./plugins:/opt/airflow/plugins:Z
+      - ./scripts:/opt/airflow/scripts:Z
+    network_mode: host
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags:Z
+      - ./logs:/opt/airflow/logs:Z
+      - ./plugins:/opt/airflow/plugins:Z
+      - ./scripts:/opt/airflow/scripts:Z
+    command: scheduler
+    network_mode: host
+
+  airflow-webserver:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags:Z
+      - ./logs:/opt/airflow/logs:Z
+      - ./plugins:/opt/airflow/plugins:Z
+      - ./scripts:/opt/airflow/scripts:Z
+    command: webserver
+    network_mode: host
+
+  airflow-triggerer:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags:Z
+      - ./logs:/opt/airflow/logs:Z
+      - ./plugins:/opt/airflow/plugins:Z
+      - ./scripts:/opt/airflow/scripts:Z
+    command: triggerer
+    network_mode: host
+
+  airflow-worker:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    hostname: worker-1
+    volumes:
+      - ./dags:/opt/airflow/dags:Z
+      - ./logs:/opt/airflow/logs:Z
+      - ./plugins:/opt/airflow/plugins:Z
+      - ./scripts:/opt/airflow/scripts:Z
+    command: celery worker
+    network_mode: host
+
+  flower:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    command: celery flower
+    network_mode: host
