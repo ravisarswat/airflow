@@ -1,0 +1,6 @@
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=mysql+mysqldb://airflow:airflow@10.129.140.161:3306/airflow
+AIRFLOW__CELERY__BROKER_URL=amqp://airflow:airflow@10.129.140.161:5672/airflow
+AIRFLOW__CELERY__RESULT_BACKEND=db+mysql://airflow:airflow@10.129.140.161:3306/airflow
+
+NO_PROXY=localhost,127.0.0.1,10.129.140.161
+no_proxy=localhost,127.0.0.1,10.129.140.161
