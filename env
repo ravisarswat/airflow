@@ -1,4 +1,25 @@
-AIRFLOW_IMAGE=apache/airflow:2.9.3
+# Core
+AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+AIRFLOW__CORE__FERNET_KEY=
+AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=True
+AIRFLOW__CORE__LOAD_EXAMPLES=False
+TZ=Asia/Kolkata
 AIRFLOW_UID=50000
-AIRFLOW_GID=50000
-_PIP_ADDITIONAL_REQUIREMENTS=
+
+# Database (MySQL on rmq01)
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=mysql+mysqldb://airflow:airflow@rmq01.ufact.ny2:3306/airflow
+
+# Celery (RabbitMQ on rmq01) — using named vhost "airflow"
+AIRFLOW__CELERY__BROKER_URL=amqp://airflow:airflow@rmq01.ufact.ny2:5672/airflow
+AIRFLOW__CELERY__RESULT_BACKEND=db+mysql://airflow:airflow@rmq01.ufact.ny2:3306/airflow
+
+# Webserver
+AIRFLOW__WEBSERVER__SECRET_KEY=
+AIRFLOW__WEBSERVER__EXPOSE_CONFIG=False
+
+# Admin user (for airflow-init)
+_AIRFLOW_WWW_USER_USERNAME=admin
+_AIRFLOW_WWW_USER_PASSWORD=ChangeMeNow!
+_AIRFLOW_WWW_USER_FIRSTNAME=Admin
+_AIRFLOW_WWW_USER_LASTNAME=User
+_AIRFLOW_WWW_USER_EMAIL=admin@example.com
