@@ -1,101 +1,82 @@
----
-version: "3.8"
-
-x-airflow-common: &airflow-common
-  image: apache/airflow:2.9.3
-  env_file:
-    - .env
-  environment:
-    # --- Core ---
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW__CORE__FERNET_KEY:-}"
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
-    AIRFLOW__CORE__DAG_CONCURRENCY: "16"
-    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
-    # --- DB & Broker (Celery) ---
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-    AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql+psycopg2://airflow:airflow@postgres/airflow
-  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
-  volumes:
-    - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
-  restart: unless-stopped
+version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  redis:
-    image: redis:7
-    restart: unless-stopped
-
-  airflow-init:
-    <<: *airflow-common
-    entrypoint: /bin/bash
-    command: >
-      -c "
-      set -e;
-      airflow db upgrade &&
-      airflow users create
-        --username ${AIRFLOW_ADMIN_USER:-admin}
-        --password ${AIRFLOW_ADMIN_PASSWORD:-admin}
-        --firstname ${AIRFLOW_ADMIN_FIRSTNAME:-Admin}
-        --lastname ${AIRFLOW_ADMIN_LASTNAME:-User}
-        --role Admin
-        --email ${AIRFLOW_ADMIN_EMAIL:-admin@example.com}
-      "
-    depends_on:
-      - postgres
-      - redis
-
-  webserver:
-    <<: *airflow-common
-    command: webserver
+  airflow-webserver:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
     ports:
       - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+    command: webserver
     depends_on:
-      - postgres
-      - redis
+      - airflow-scheduler
 
-  scheduler:
-    <<: *airflow-common
+  airflow-scheduler:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
     command: scheduler
-    depends_on:
-      - webserver
 
-  worker:
-    <<: *airflow-common
+  airflow-triggerer:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+    command: triggerer
+
+  airflow-worker:
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
+    hostname: worker-1
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
     command: celery worker
     depends_on:
-      - scheduler
-      - redis
-      - postgres
-
-  triggerer:
-    <<: *airflow-common
-    command: triggerer
-    depends_on:
-      - scheduler
+      - airflow-scheduler
 
   flower:
-    <<: *airflow-common
-    command: celery flower
+    image: apache/airflow:2.9.0
+    restart: always
+    env_file: .env
     ports:
       - "5555:5555"
-    depends_on:
-      - scheduler
-      - redis
-      - postgres
+    command: celery flower
 
-volumes:
-  postgres-data:
+  airflow-init:
+    image: apache/airflow:2.9.0
+    env_file: .env
+    entrypoint: ""
+    command: >
+      bash -lc "
+      airflow db init &&
+      airflow users create
+        --role Admin
+        --username ${_AIRFLOW_WWW_USER_USERNAME}
+        --password ${_AIRFLOW_WWW_USER_PASSWORD}
+        --firstname ${_AIRFLOW_WWW_USER_FIRSTNAME}
+        --lastname ${_AIRFLOW_WWW_USER_LASTNAME}
+        --email ${_AIRFLOW_WWW_USER_EMAIL}
+      "
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
