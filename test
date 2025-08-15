@@ -1,0 +1,27 @@
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from datetime import datetime
+
+with DAG(
+    dag_id="cli_test_dag",
+    start_date=datetime(2025, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+) as dag:
+
+    task1 = BashOperator(
+        task_id="print_hello",
+        bash_command="echo 'Hello from Airflow CLI Test!'"
+    )
+
+
+
+podman exec -it <webserver_container_id> airflow dags list
+
+
+podman exec -it <webserver_container_id> airflow dags trigger cli_test_dag
+
+podman exec -it <webserver_container_id> airflow dags list-runs -d cli_test_dag
+
+podman exec -it <webserver_container_id> airflow tasks logs cli_test_dag print_hello <run_id>
+
