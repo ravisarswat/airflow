@@ -1,0 +1,48 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.0
+  env_file:
+    - /opt/ufactairflow/.env
+  volumes:
+    - /opt/ufactairflow:/opt/airflow:Z
+  restart: always
+  network_mode: host
+
+services:
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: ""
+    command: >
+      bash -lc "
+      [ -f /opt/airflow/requirements.txt ] && pip install --no-cache-dir -r /opt/airflow/requirements.txt || true &&
+      airflow db upgrade &&
+      airflow users list | grep -q \" ${_AIRFLOW_WWW_USER_USERNAME} \" || airflow users create
+        --role Admin
+        --username ${_AIRFLOW_WWW_USER_USERNAME}
+        --password ${_AIRFLOW_WWW_USER_PASSWORD}
+        --firstname ${_AIRFLOW_WWW_USER_FIRSTNAME}
+        --lastname ${_AIRFLOW_WWW_USER_LASTNAME}
+        --email ${_AIRFLOW_WWW_USER_EMAIL}
+      "
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+
+  airflow-worker:
+    <<: *airflow-common
+    hostname: worker-1
+    command: celery worker
+
+  flower:
+    <<: *airflow-common
+    command: celery flower
