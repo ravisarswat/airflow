@@ -1,0 +1,17 @@
+sql_alchemy_conn_cmd = python - <<'PY'
+  import yaml
+  with open("/opt/airflow/strings.yml") as f:
+      print(yaml.safe_load(f)["strings"]["app_db"], end="")
+PY
+
+broker_url_cmd = python - <<'PY'
+  import yaml
+  with open("/opt/airflow/strings.yml") as f:
+      print(yaml.safe_load(f)["strings"]["msg_rmq"], end="")
+PY
+
+result_backend_cmd = python - <<'PY'
+  import yaml
+  with open("/opt/airflow/strings.yml") as f:
+      print(yaml.safe_load(f)["strings"]["msg_db"], end="")
+PY
